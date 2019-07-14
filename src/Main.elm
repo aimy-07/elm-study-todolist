@@ -13,19 +13,21 @@ import Todo.Id exposing (Id)
 ---- MODEL ----
 
 
-type FormS
-    = Open
+type AddFormS
+    = AddFormOpen Todo
     | Sending
-    | Close
+    | AddFormClose
+
+
+type EditFormS
+    = EditFormOpen Todo
+    | EditFormClose
 
 
 type alias Model =
     { todos : List Todo
-    , addFormS : FormS
-    , addingTodoText : String
-    , editFormS : FormS
-    , editingTodoId : Id
-    , editingTodoText : String
+    , addFormS : AddFormS
+    , editFormS : EditFormS
     }
 
 
@@ -45,11 +47,8 @@ init =
               , done = False
               }
             ]
-      , addFormS = Close
-      , addingTodoText = ""
-      , editFormS = Close
-      , editingTodoId = ""
-      , editingTodoText = ""
+      , addFormS = AddFormClose
+      , editFormS = EditFormClose
       }
     , Cmd.none
     )
@@ -65,7 +64,7 @@ type Msg
     | AddTodo
     | AddedTodo Todo
     | CancelAddTodo
-    | OpenEditTodoForm Id String
+    | OpenEditTodoForm Todo
     | ChangeEditTodoText String
     | UpdateTodoText
     | CancelUpdateTodoText
@@ -76,39 +75,59 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         OpenAddTodoForm ->
-            ( { model | addFormS = Open }, Cmd.none )
+            ( { model | addFormS = AddFormOpen Todo.initialTodo }, Cmd.none )
 
         ChangeAddTodoText text ->
-            ( { model | addingTodoText = text }, Cmd.none )
+            case model.addFormS of
+                AddFormOpen newTodo ->
+                    ( { model | addFormS = AddFormOpen { newTodo | text = text } }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         AddTodo ->
-            ( { model | addFormS = Sending }, addTodo { text = model.addingTodoText } )
+            case model.addFormS of
+                AddFormOpen newTodo ->
+                    ( { model | addFormS = Sending }, addTodo newTodo )
+
+                _ ->
+                    ( model, Cmd.none )
 
         AddedTodo newTodo ->
             let
                 nextTodos =
                     model.todos ++ [ newTodo ]
             in
-            ( { model | todos = nextTodos, addFormS = Close, addingTodoText = "" }, Cmd.none )
+            ( { model | todos = nextTodos, addFormS = AddFormClose }, Cmd.none )
 
         CancelAddTodo ->
-            ( { model | addFormS = Close, addingTodoText = "" }, Cmd.none )
+            ( { model | addFormS = AddFormClose }, Cmd.none )
 
-        OpenEditTodoForm id text ->
-            ( { model | editFormS = Open, editingTodoId = id, editingTodoText = text }, Cmd.none )
+        OpenEditTodoForm todo ->
+            ( { model | editFormS = EditFormOpen todo }, Cmd.none )
 
         ChangeEditTodoText text ->
-            ( { model | editingTodoText = text }, Cmd.none )
+            case model.editFormS of
+                EditFormOpen newTodo ->
+                    ( { model | editFormS = EditFormOpen { newTodo | text = text } }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         UpdateTodoText ->
-            let
-                nextTodos =
-                    List.map (\todo -> Todo.updateText model.editingTodoId model.editingTodoText todo) model.todos
-            in
-            ( { model | todos = nextTodos, editFormS = Close, editingTodoId = "", editingTodoText = "" }, Cmd.none )
+            case model.editFormS of
+                EditFormOpen newTodo ->
+                    let
+                        nextTodos =
+                            List.map (\todo -> Todo.updateText newTodo.id newTodo.text todo) model.todos
+                    in
+                    ( { model | todos = nextTodos, editFormS = EditFormClose }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         CancelUpdateTodoText ->
-            ( { model | editFormS = Close, editingTodoId = "", editingTodoText = "" }, Cmd.none )
+            ( { model | editFormS = EditFormClose }, Cmd.none )
 
         UpdateTodoDone id ->
             let
@@ -129,9 +148,9 @@ view model =
         , div [] <|
             List.map (\todo -> viewTodo todo model) model.todos
         , button [ class "addTodoButton", onClick OpenAddTodoForm ] [ text "TODOを追加する" ]
-            |> viewIf (model.addFormS == Close)
+            |> viewIf (model.addFormS == AddFormClose)
         , viewAddTodoForm
-            |> viewIf (model.addFormS == Open)
+            |> viewIf (model.addFormS /= AddFormClose)
         ]
 
 
@@ -145,13 +164,22 @@ viewTodo todo model =
 
                 False ->
                     span [ onClick <| UpdateTodoDone todo.id, class "todo-icon" ] [ icon square ]
+
+        viewTodoItem =
+            case model.editFormS of
+                EditFormOpen todo_ ->
+                    if todo.id == todo_.id then
+                        viewEditTodoForm todo_.text
+
+                    else
+                        viewTodoText todo
+
+                EditFormClose ->
+                    viewTodoText todo
     in
     div [ class "todo-wrapper" ]
         [ viewDoneIcon
-        , span [ onClick <| OpenEditTodoForm todo.id todo.text, class "todo-text" ] [ text todo.text ]
-            |> viewIf (model.editingTodoId /= todo.id || model.editFormS == Close)
-        , viewEditTodoForm model.editingTodoText
-            |> viewIf (model.editingTodoId == todo.id && model.editFormS == Open)
+        , viewTodoItem
         ]
 
 
@@ -173,6 +201,11 @@ viewEditTodoForm inputValue =
         ]
 
 
+viewTodoText : Todo -> Html Msg
+viewTodoText todo =
+    span [ onClick <| OpenEditTodoForm todo, class "todo-text" ] [ text todo.text ]
+
+
 
 ---- ViewHelper ----
 
@@ -191,7 +224,7 @@ viewIf show element =
 ---- PORTS ----
 
 
-port addTodo : { text : String } -> Cmd msg
+port addTodo : Todo -> Cmd msg
 
 
 port addedTodo : (Todo -> msg) -> Sub msg

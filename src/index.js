@@ -12,11 +12,8 @@ registerServiceWorker();
 // -----------------------------
 // Port
 // -----------------------------
-app.ports.addTodo.subscribe(({text}) => {
+app.ports.addTodo.subscribe((newTodo) => {
   const uuid = uuidv4();
-  app.ports.addedTodo.send({
-    id: uuid,
-    text: text,
-    done: false,
-  });
+  newTodo.id = uuid;
+  app.ports.addedTodo.send(newTodo);
 });

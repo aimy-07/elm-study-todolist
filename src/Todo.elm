@@ -1,4 +1,4 @@
-module Todo exposing (Todo, updateDone, updateText)
+module Todo exposing (Todo, initialTodo, updateDone, updateText)
 
 import Todo.Id exposing (Id)
 
@@ -26,3 +26,11 @@ updateDone id todo =
 
     else
         todo
+
+
+initialTodo : Todo
+initialTodo =
+    { id = ""
+    , text = ""
+    , done = False
+    }
