@@ -76,7 +76,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         OpenAddTodoForm ->
-            ( { model | addFormS = Open, editFormS = Close }, Cmd.none )
+            ( { model | addFormS = Open }, Cmd.none )
 
         ChangeAddTodoText text ->
             ( { model | addingTodoText = text }, Cmd.none )
@@ -95,7 +95,7 @@ update msg model =
             ( { model | addFormS = Close, addingTodoText = "" }, Cmd.none )
 
         OpenEditTodoForm id text ->
-            ( { model | editFormS = Open, editingTodoId = id, editingTodoText = text, addFormS = Close }, Cmd.none )
+            ( { model | editFormS = Open, editingTodoId = id, editingTodoText = text }, Cmd.none )
 
         ChangeEditTodoText text ->
             ( { model | editingTodoText = text }, Cmd.none )
