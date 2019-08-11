@@ -22,10 +22,9 @@ type FormS
 type alias Model =
     { todos : List Todo
     , addFormS : FormS
-    , addingTodoText : String
+    , addingTodo : Todo
     , editFormS : FormS
-    , editingTodoId : Id
-    , editingTodoText : String
+    , editingTodo : Todo
     }
 
 
@@ -46,10 +45,9 @@ init =
               }
             ]
       , addFormS = Close
-      , addingTodoText = ""
+      , addingTodo = Todo.init
       , editFormS = Close
-      , editingTodoId = ""
-      , editingTodoText = ""
+      , editingTodo = Todo.init
       }
     , Cmd.none
     )
@@ -65,7 +63,7 @@ type Msg
     | AddTodo
     | AddedTodo Todo
     | CancelAddTodo
-    | OpenEditTodoForm Id String
+    | OpenEditTodoForm Todo
     | ChangeEditTodoText String
     | UpdateTodoText
     | CancelUpdateTodoText
@@ -76,39 +74,53 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         OpenAddTodoForm ->
-            ( { model | addFormS = Open }, Cmd.none )
+            ( { model | addFormS = Open, addingTodo = Todo.init }, Cmd.none )
 
         ChangeAddTodoText text ->
-            ( { model | addingTodoText = text }, Cmd.none )
+            let
+                addingTodo =
+                    model.addingTodo
+
+                nextAddingTodo =
+                    { addingTodo | text = text }
+            in
+            ( { model | addingTodo = nextAddingTodo }, Cmd.none )
 
         AddTodo ->
-            ( { model | addFormS = Sending }, addTodo { text = model.addingTodoText } )
+            ( { model | addFormS = Sending }, addTodo { text = model.addingTodo.text } )
 
         AddedTodo newTodo ->
             let
                 nextTodos =
                     model.todos ++ [ newTodo ]
             in
-            ( { model | todos = nextTodos, addFormS = Close, addingTodoText = "" }, Cmd.none )
+            ( { model | todos = nextTodos, addFormS = Close, addingTodo = Todo.init }, Cmd.none )
 
         CancelAddTodo ->
-            ( { model | addFormS = Close, addingTodoText = "" }, Cmd.none )
+            ( { model | addFormS = Close, addingTodo = Todo.init }, Cmd.none )
 
-        OpenEditTodoForm id text ->
-            ( { model | editFormS = Open, editingTodoId = id, editingTodoText = text }, Cmd.none )
+        OpenEditTodoForm todo ->
+            ( { model | editFormS = Open, editingTodo = todo }, Cmd.none )
 
         ChangeEditTodoText text ->
-            ( { model | editingTodoText = text }, Cmd.none )
+            let
+                editingTodo =
+                    model.editingTodo
+
+                nextEditingTodo =
+                    { editingTodo | text = text }
+            in
+            ( { model | editingTodo = nextEditingTodo }, Cmd.none )
 
         UpdateTodoText ->
             let
                 nextTodos =
-                    List.map (\todo -> Todo.updateText model.editingTodoId model.editingTodoText todo) model.todos
+                    List.map (\todo -> Todo.updateText model.editingTodo.id model.editingTodo.text todo) model.todos
             in
-            ( { model | todos = nextTodos, editFormS = Close, editingTodoId = "", editingTodoText = "" }, Cmd.none )
+            ( { model | todos = nextTodos, editFormS = Close, editingTodo = Todo.init }, Cmd.none )
 
         CancelUpdateTodoText ->
-            ( { model | editFormS = Close, editingTodoId = "", editingTodoText = "" }, Cmd.none )
+            ( { model | editFormS = Close, editingTodo = Todo.init }, Cmd.none )
 
         UpdateTodoDone id ->
             let
@@ -148,10 +160,10 @@ viewTodo todo model =
     in
     div [ class "todo-wrapper" ]
         [ viewDoneIcon
-        , span [ onClick <| OpenEditTodoForm todo.id todo.text, class "todo-text" ] [ text todo.text ]
-            |> viewIf (model.editingTodoId /= todo.id || model.editFormS == Close)
-        , viewEditTodoForm model.editingTodoText
-            |> viewIf (model.editingTodoId == todo.id && model.editFormS == Open)
+        , span [ onClick <| OpenEditTodoForm todo, class "todo-text" ] [ text todo.text ]
+            |> viewIf (model.editingTodo.id /= todo.id || model.editFormS == Close)
+        , viewEditTodoForm model.editingTodo.text
+            |> viewIf (model.editingTodo.id == todo.id && model.editFormS == Open)
         ]
 
 

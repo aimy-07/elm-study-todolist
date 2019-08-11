@@ -1,4 +1,4 @@
-module Todo exposing (Todo, updateDone, updateText)
+module Todo exposing (Todo, updateDone, updateText, init)
 
 import Todo.Id exposing (Id)
 
@@ -7,6 +7,14 @@ type alias Todo =
     { id : Id
     , text : String
     , done : Bool
+    }
+
+
+init : Todo
+init =
+    { id = ""
+    , text = ""
+    , done = False
     }
 
 
